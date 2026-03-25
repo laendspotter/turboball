@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TURBOBALL — Der Ball der alles verändert</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Bebas+Neue&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --tb-black: #0a0a0a;
+    --tb-white: #f5f5f0;
+    --tb-yellow: #FFE500;
+    --tb-orange: #FF6B00;
+    --tb-red: #FF1A1A;
+    --tb-green: #00FF88;
+    --tb-blue: #0066FF;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--tb-black);
+    color: var(--tb-white);
+    font-family: 'Space Mono', monospace;
+    overflow-x: hidden;
+    cursor: crosshair;
+  }
+
+  /* NOISE TEXTURE */
+  body::before {
+    content: '';
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    opacity: 0.03;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 1000;
+  }
+
+  /* SCANLINES */
+  body::after {
+    content: '';
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px);
+    pointer-events: none;
+    z-index: 999;
+  }
+
+  /* HERO */
+  .hero {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+    padding: 2rem;
+    text-align: center;
+  }
+
+  /* ANIMATED BACKGROUND BALLS */
+  .bg-ball {
+    position: absolute;
+    border-radius: 50%;
+    opacity: 0.12;
+    animation: float 8s ease-in-out infinite;
+    pointer-events: none;
+  }
+  .bg-ball:nth-child(1) { width: 600px; height: 600px; background: radial-gradient(circle, var(--tb-yellow), var(--tb-orange)); top: -200px; right: -200px; animation-delay: 0s; }
+  .bg-ball:nth-child(2) { width: 400px; height: 400px; background: radial-gradient(circle, var(--tb-blue), var(--tb-green)); bottom: -100px; left: -100px; animation-delay: -3s; }
+  .bg-ball:nth-child(3) { width: 250px; height: 250px; background: radial-gradient(circle, var(--tb-red), var(--tb-orange)); top: 30%; left: 10%; animation-delay: -5s; }
+
+  @keyframes float {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    33% { transform: translate(20px, -30px) scale(1.05); }
+    66% { transform: translate(-15px, 20px) scale(0.95); }
+  }
+
+  .badge {
+    display: inline-block;
+    background: var(--tb-yellow);
+    color: var(--tb-black);
+    font-family: 'Space Mono', monospace;
+    font-weight: 700;
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    padding: 6px 16px;
+    text-transform: uppercase;
+    margin-bottom: 2rem;
+    animation: pulse-badge 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse-badge {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(255,229,0,0.4); }
+    50% { box-shadow: 0 0 20px 8px rgba(255,229,0,0.2); }
+  }
+
+  .hero-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(6rem, 20vw, 18rem);
+    line-height: 0.85;
+    letter-spacing: -0.02em;
+    position: relative;
+    z-index: 2;
+  }
+
+  .hero-title .line1 { color: var(--tb-white); display: block; }
+  .hero-title .line2 {
+    color: transparent;
+    -webkit-text-stroke: 2px var(--tb-yellow);
+    display: block;
+    animation: glitch 4s ease-in-out infinite;
+  }
+
+  @keyframes glitch {
+    0%, 90%, 100% { transform: translateX(0); text-shadow: none; }
+    92% { transform: translateX(-4px); text-shadow: 4px 0 var(--tb-red); }
+    94% { transform: translateX(4px); text-shadow: -4px 0 var(--tb-blue); }
+    96% { transform: translateX(-2px); text-shadow: 2px 0 var(--tb-green); }
+    98% { transform: translateX(0); }
+  }
+
+  .hero-sub {
+    font-size: clamp(0.9rem, 2vw, 1.1rem);
+    color: rgba(245,245,240,0.6);
+    letter-spacing: 0.1em;
+    margin-top: 2rem;
+    max-width: 500px;
+    line-height: 1.8;
+    position: relative;
+    z-index: 2;
+  }
+
+  .scroll-hint {
+    position: absolute;
+    bottom: 2rem;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 11px;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.3);
+    animation: bounce 2s ease-in-out infinite;
+  }
+  @keyframes bounce { 0%,100%{transform:translateX(-50%) translateY(0)} 50%{transform:translateX(-50%) translateY(8px)} }
+
+  /* FEATURES SECTION */
+  .features {
+    padding: 8rem 2rem;
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+
+  .section-label {
+    font-size: 11px;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--tb-yellow);
+    margin-bottom: 1rem;
+  }
+
+  .features-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(3rem, 8vw, 6rem);
+    line-height: 1;
+    margin-bottom: 5rem;
+  }
+
+  .features-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 2px;
+  }
+
+  .feature-card {
+    background: #111;
+    padding: 2.5rem;
+    border: 1px solid rgba(255,255,255,0.05);
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.3s ease, border-color 0.3s ease;
+  }
+
+  .feature-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: var(--accent, var(--tb-yellow));
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.4s ease;
+  }
+
+  .feature-card:hover { transform: translateY(-4px); border-color: rgba(255,255,255,0.15); }
+  .feature-card:hover::before { transform: scaleX(1); }
+
+  .feature-number {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 5rem;
+    line-height: 1;
+    color: rgba(255,255,255,0.05);
+    position: absolute;
+    top: 1rem; right: 1.5rem;
+  }
+
+  .feature-icon {
+    font-size: 2.5rem;
+    margin-bottom: 1.5rem;
+    display: block;
+  }
+
+  .feature-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.8rem;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.75rem;
+    color: var(--accent, var(--tb-yellow));
+  }
+
+  .feature-text {
+    font-size: 0.85rem;
+    line-height: 1.8;
+    color: rgba(245,245,240,0.55);
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* PRODUCT IMAGE SECTION */
+  .product-section {
+    padding: 8rem 2rem;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .product-section::before {
+    content: '';
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 800px; height: 800px;
+    background: radial-gradient(circle, rgba(255,107,0,0.06) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .product-img-wrap {
+    max-width: 500px;
+    margin: 3rem auto;
+    position: relative;
+  }
+
+  .product-img-wrap img {
+    width: 100%;
+    border-radius: 8px;
+    animation: float-img 6s ease-in-out infinite;
+    filter: drop-shadow(0 0 40px rgba(255,107,0,0.4)) drop-shadow(0 0 80px rgba(255,229,0,0.2));
+  }
+
+  @keyframes float-img {
+    0%,100% { transform: translateY(0) scale(1); }
+    50% { transform: translateY(-12px) scale(1.01); }
+  }
+
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+  /* CHECKOUT SECTION */
+  .checkout-section {
+    padding: 8rem 2rem;
+    max-width: 700px;
+    margin: 0 auto;
+    text-align: center;
+  }
+
+  .price-display {
+    margin: 3rem 0;
+  }
+
+  .price-original {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 4rem;
+    color: rgba(255,255,255,0.2);
+    text-decoration: line-through;
+    text-decoration-color: var(--tb-red);
+    display: block;
+  }
+
+  .price-actual {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 7rem;
+    color: var(--tb-green);
+    line-height: 0.9;
+    display: block;
+    animation: glow-green 2s ease-in-out infinite;
+  }
+
+  @keyframes glow-green {
+    0%,100%{text-shadow:0 0 20px rgba(0,255,136,0.3)}
+    50%{text-shadow:0 0 60px rgba(0,255,136,0.6), 0 0 100px rgba(0,255,136,0.2)}
+  }
+
+  .price-note {
+    font-size: 0.8rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.3);
+    margin-top: 0.5rem;
+  }
+
+  .email-input-wrap {
+    display: flex;
+    gap: 0;
+    max-width: 500px;
+    margin: 2rem auto 0;
+  }
+
+  .email-input {
+    flex: 1;
+    background: #111;
+    border: 1px solid rgba(255,255,255,0.1);
+    border-right: none;
+    color: var(--tb-white);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.85rem;
+    padding: 1rem 1.5rem;
+    outline: none;
+    transition: border-color 0.3s;
+  }
+
+  .email-input:focus { border-color: var(--tb-yellow); }
+  .email-input::placeholder { color: rgba(255,255,255,0.2); }
+
+  .claim-btn {
+    background: var(--tb-green);
+    color: var(--tb-black);
+    border: none;
+    font-family: 'Space Mono', monospace;
+    font-weight: 700;
+    font-size: 0.85rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 1rem 2rem;
+    cursor: crosshair;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+  }
+
+  .claim-btn:hover { background: #00ffaa; transform: scale(1.02); }
+  .claim-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+  /* SUCCESS STATE */
+  .success-box {
+    display: none;
+    background: #0a1f12;
+    border: 1px solid rgba(0,255,136,0.3);
+    padding: 3rem;
+    text-align: center;
+    margin-top: 2rem;
+    animation: fadeIn 0.5s ease;
+  }
+
+  @keyframes fadeIn { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+
+  .success-box h3 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 3rem;
+    color: var(--tb-green);
+    margin-bottom: 1rem;
+  }
+
+  .success-box p {
+    font-size: 0.85rem;
+    color: rgba(255,255,255,0.5);
+    line-height: 1.8;
+    margin-bottom: 2rem;
+  }
+
+  .download-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
+    background: transparent;
+    color: var(--tb-green);
+    border: 1px solid var(--tb-green);
+    font-family: 'Space Mono', monospace;
+    font-weight: 700;
+    font-size: 0.85rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 1rem 2rem;
+    cursor: crosshair;
+    text-decoration: none;
+    transition: all 0.2s ease;
+  }
+
+  .download-btn:hover { background: var(--tb-green); color: var(--tb-black); }
+
+  /* IMAGE SHOWN IN SUCCESS */
+  .success-image {
+    width: 100%;
+    max-width: 300px;
+    margin: 2rem auto;
+    display: block;
+    border: 1px solid rgba(0,255,136,0.2);
+  }
+
+  /* FOOTER */
+  footer {
+    padding: 4rem 2rem;
+    text-align: center;
+    border-top: 1px solid rgba(255,255,255,0.05);
+  }
+
+  footer .logo {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 3rem;
+    color: rgba(255,255,255,0.15);
+    letter-spacing: 0.1em;
+  }
+
+  footer p {
+    font-size: 0.75rem;
+    color: rgba(255,255,255,0.2);
+    letter-spacing: 0.15em;
+    margin-top: 1rem;
+  }
+
+  /* MARQUEE */
+  .marquee-wrap {
+    overflow: hidden;
+    border-top: 1px solid rgba(255,255,255,0.06);
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    padding: 1rem 0;
+    background: #0d0d0d;
+  }
+
+  .marquee-inner {
+    display: flex;
+    gap: 3rem;
+    animation: marquee 20s linear infinite;
+    white-space: nowrap;
+  }
+
+  .marquee-inner span {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.2rem;
+    letter-spacing: 0.2em;
+    color: rgba(255,255,255,0.15);
+    flex-shrink: 0;
+  }
+
+  .marquee-inner span.accent { color: var(--tb-yellow); }
+
+  @keyframes marquee { from{transform:translateX(0)} to{transform:translateX(-50%)} }
+
+  /* RESPONSIVE */
+  @media (max-width: 600px) {
+    .email-input-wrap { flex-direction: column; }
+    .email-input { border-right: 1px solid rgba(255,255,255,0.1); border-bottom: none; }
+    .claim-btn { width: 100%; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="bg-ball"></div>
+  <div class="bg-ball"></div>
+  <div class="bg-ball"></div>
+
+  <div class="badge">★ Musik · Merch · Magic ★</div>
+
+  <h1 class="hero-title">
+    <span class="line1">TURBO</span>
+    <span class="line2">BALL</span>
+  </h1>
+
+  <p class="hero-sub">
+    Der Ball, der immer trifft.<br>
+    Der Ball, der nie verloren geht.<br>
+    Der einzige Ball, den du brauchst.
+  </p>
+
+  <div class="scroll-hint">↓ scroll ↓</div>
+</section>
+
+<!-- MARQUEE -->
+<div class="marquee-wrap">
+  <div class="marquee-inner">
+    <span>TURBOBALL</span><span class="accent">★</span>
+    <span>IMMER IM BALLBESITZ</span><span class="accent">★</span>
+    <span>TRIFFT IMMER</span><span class="accent">★</span>
+    <span>TURBOBALL</span><span class="accent">★</span>
+    <span>IMMER IM BALLBESITZ</span><span class="accent">★</span>
+    <span>TRIFFT IMMER</span><span class="accent">★</span>
+    <span>TURBOBALL</span><span class="accent">★</span>
+    <span>IMMER IM BALLBESITZ</span><span class="accent">★</span>
+    <span>TRIFFT IMMER</span><span class="accent">★</span>
+    <span>TURBOBALL</span><span class="accent">★</span>
+    <span>IMMER IM BALLBESITZ</span><span class="accent">★</span>
+    <span>TRIFFT IMMER</span><span class="accent">★</span>
+  </div>
+</div>
+
+<!-- FEATURES -->
+<section class="features">
+  <p class="section-label">// Was macht ihn so besonders?</p>
+  <h2 class="features-title">DREI DINGE.<br>EIN BALL.</h2>
+
+  <div class="features-grid">
+    <div class="feature-card" style="--accent: var(--tb-yellow)">
+      <span class="feature-number">01</span>
+      <span class="feature-icon">⚡</span>
+      <h3 class="feature-title">Trifft Immer</h3>
+      <p class="feature-text">Egal wie du schießt, egal wohin du zielst – der Turboball findet seinen Weg ins Tor. Physik? Kenn ich nicht.</p>
+    </div>
+    <div class="feature-card" style="--accent: var(--tb-orange)">
+      <span class="feature-number">02</span>
+      <span class="feature-icon">🧲</span>
+      <h3 class="feature-title">Nie Verloren</h3>
+      <p class="feature-text">Der Ball bleibt immer bei deinem Team. Gegner können ihn nicht nehmen. Er kommt zurück. Immer.</p>
+    </div>
+    <div class="feature-card" style="--accent: var(--tb-green)">
+      <span class="feature-number">03</span>
+      <span class="feature-icon">🔥</span>
+      <h3 class="feature-title">Turbo-Speed</h3>
+      <p class="feature-text">Entwickelt in den Tiefen des Soundstudios. Inspiriert von unserer Musik. Dieser Ball ist Energie in Kugelform.</p>
+    </div>
+  </div>
+</section>
+
+<!-- PRODUCT IMAGE SECTION -->
+<section class="product-section">
+  <p class="section-label">// Das Produkt</p>
+  <h2 class="features-title" style="font-family:'Bebas Neue',sans-serif;font-size:clamp(3rem,8vw,6rem)">SIEH IHN.<br>FÜHL IHN.</h2>
+  <div class="product-img-wrap">
+    <img src="turboball.png" alt="Turboball – der Ball der alles veraendert" />
+  </div>
+</section>
+
+<!-- CHECKOUT SECTION -->
+<section class="checkout-section">
+  <p class="section-label">// Jetzt holen</p>
+  <h2 style="font-family:'Bebas Neue',sans-serif;font-size:clamp(3rem,8vw,5rem);line-height:1">DEIN TURBOBALL<br>WARTET.</h2>
+
+  <div class="price-display">
+    <span class="price-original">39,99€</span>
+    <span class="price-actual">GRATIS</span>
+    <p class="price-note">Für immer. Für dich. Deal.</p>
+  </div>
+
+  <p style="font-size:0.8rem;color:rgba(255,255,255,0.35);letter-spacing:0.1em;line-height:1.9;margin-bottom:2rem;">
+    Gib deine E-Mail ein → lade dein<br>
+    Turboball-Produktbild gratis herunter.
+  </p>
+
+  <div class="email-input-wrap">
+    <input type="email" class="email-input" id="email-input" placeholder="deine@email.de" />
+    <button class="claim-btn" id="claim-btn" onclick="claimBall()">Holen ✦</button>
+  </div>
+
+  <div class="success-box" id="success-box">
+    <h3>🔥 Turboball gehört dir!</h3>
+    <img class="success-image" src="turboball.png" alt="Dein Turboball" />
+    <p>
+      Du hast dir den einzigen Ball gesichert, der immer trifft.<br>
+      Dein Bild ist bereit zum Download.
+    </p>
+    <a href="turboball.png" download="turboball.png" class="download-btn">
+      ↓ Bild herunterladen
+    </a>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="logo">TURBOBALL</div>
+  <p>Ein Musikprojekt. Eine Idee. Ein Ball. · turboball.store</p>
+</footer>
+
+<script>
+function claimBall() {
+  const email = document.getElementById('email-input').value;
+  if (!email || !email.includes('@')) {
+    document.getElementById('email-input').style.borderColor = 'var(--tb-red)';
+    setTimeout(() => document.getElementById('email-input').style.borderColor = '', 2000);
+    return;
+  }
+  const claimBtn = document.getElementById('claim-btn');
+  claimBtn.disabled = true;
+  claimBtn.textContent = '✓ Gesichert!';
+  const successBox = document.getElementById('success-box');
+  successBox.style.display = 'block';
+  successBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+</script>
+</body>
+</html>
